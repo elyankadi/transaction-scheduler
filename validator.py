@@ -17,10 +17,11 @@ def validate_transaction_ops(tid: int, ops: List[Operation]) -> List[Operation]:
         raise ValidationError(f"T{tid}: empty transaction.")
 
     # Auto insert START if missing
+    # START must be the first operation (strict requirement)
     if ops[0].optype != OpType.START:
-        print(f"⚠ T{tid}: START missing. Automatically inserting s{tid}.")
-        from model import Operation
-        ops = [Operation(OpType.START, tid, None, f"s{tid}")] + ops
+        raise ValidationError(
+            f"T{tid}: must begin with START(T{tid}) as the first operation."
+        )
 
     # Check commit/abort rules
     end_ops = [op for op in ops if op.optype in (OpType.COMMIT, OpType.ABORT)]
@@ -40,7 +41,24 @@ def validate_transaction_ops(tid: int, ops: List[Operation]) -> List[Operation]:
             raise ValidationError(
                 f"T{tid}: COMMIT/ABORT found at position {i}, but must only appear at the end."
             )
+    # Allowed operation types according to project requirements
+    allowed_types = {
+        OpType.START,
+        OpType.READ,
+        OpType.WRITE,
+        OpType.INC,
+        OpType.DEC,
+        OpType.COMMIT,
+        OpType.ABORT,
+    }
 
+    # Ensure only valid operations exist
+    for i, op in enumerate(ops):
+        if op.optype not in allowed_types:
+            raise ValidationError(
+                f"T{tid}: invalid operation type '{op.optype}' found in {op.raw}. "
+                f"Only START, READ, WRITE, INC, DEC, COMMIT, ABORT are allowed."
+        )
     # Ensure all ops belong to this transaction
     for op in ops:
         if op.tid != tid:
