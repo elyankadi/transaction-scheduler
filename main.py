@@ -18,7 +18,7 @@ def main():
     print("=== Transaction Scheduling & Correctness Analyzer ===")
     n = int(input("Enter number of transactions: ").strip())
 
-    tx_ops = {}
+    tx_ops = {} # tid -> list of operations to be stored for validation of histories
 
     print("\nEnter each transaction.")
     print("You may omit START (it will be auto-added).")
@@ -33,7 +33,7 @@ def main():
         try:
             ops = validate_transaction_ops(tid, ops)
         except ValidationError as e:
-            print("\n❌ Transaction definition invalid:")
+            print("\n Transaction definition invalid:")
             print(" -", e)
             return
 
@@ -55,12 +55,12 @@ def main():
             history = parse_ops(hist_str)
             validate_history_against_transactions(history, tx_ops)
         except Exception as e:
-            print("\n❌ Invalid history:")
+            print("\n Invalid history:")
             print(" -", e)
             print()
             continue
 
-        print("\n✅ History accepted. Running checks...\n")
+        print("\n History accepted. Running checks...\n")
 
         # ---------- Correctness ----------
         reads_from, _ = compute_reads_from(history)

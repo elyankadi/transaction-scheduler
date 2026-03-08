@@ -18,7 +18,7 @@ def parse_ops(op_string: str) -> List[Operation]:
     ops: List[Operation] = []
 
     for tok in tokens:
-        tok = tok.lower()  # 🔥 IMPROVEMENT 1: normalize tokens
+        tok = tok.lower()  # normalize tokens
 
         # Shorthand START (s1)
         m = RE_START.match(tok)
