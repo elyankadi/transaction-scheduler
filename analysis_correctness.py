@@ -224,3 +224,11 @@ def check_rigorous(history: List[Operation]) -> Tuple[bool, List[str]]:
                         del s_holders[item]
 
     return (len(violations) == 0), violations
+
+def explain_property(name: str, ok: bool, violations: List[str]):
+    print(f"\n{name}: {'YES' if ok else 'NO'}")
+
+    if not ok:
+        print("Violations detected:")
+        for v in violations:
+            print(" -", v)

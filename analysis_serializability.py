@@ -1,6 +1,8 @@
+import os
+os.environ["PATH"] += os.pathsep + r"C:\Program Files (x86)\Graphviz\bin"
 from typing import Dict, List, Set, Tuple
 from model import Operation, OpType
-
+from graphviz import Digraph
 
 def _conflict(op1: Operation, op2: Operation) -> bool:
     """
@@ -150,3 +152,122 @@ def check_conflict_serializable(history: List[Operation]) -> Tuple[bool, Dict[in
         # should not happen if DFS found no cycle, but keep safe
         return False, graph, reasons, [], []
     return True, graph, reasons, topo, []
+
+def visualize_precedence_graph(graph: Dict[int, Set[int]]) -> None:
+
+    print("\n================ PRECEDENCE GRAPH ================")
+
+    if not graph:
+        print("Graph is empty.")
+        return
+
+    print("\nNodes:")
+    for tid in sorted(graph.keys()):
+        print(f"  T{tid}")
+
+    print("\nEdges:")
+
+    edge_found = False
+
+    for tid in sorted(graph.keys()):
+        for v in sorted(graph[tid]):
+            print(f"  T{tid}  --->  T{v}")
+            edge_found = True
+
+    if not edge_found:
+        print("  (no edges)")
+
+    print("==================================================")
+
+    # -------- GRAPHVIZ VISUALIZATION --------p
+
+    dot = Digraph(comment="Precedence Graph")
+
+    # add nodes
+    for tid in graph:
+        dot.node(f"T{tid}")
+
+    # add edges
+    for tid in graph:
+        for v in graph[tid]:
+            dot.edge(f"T{tid}", f"T{v}")
+
+    # create graph image
+    dot.render("precedence_graph", format="png", view=True)
+
+def explain_serializability(is_cs: bool, graph, reasons, topo, cycle):
+    print("\n=== Conflict Serializability Analysis ===")
+
+    if reasons:
+        print("\nEdges created because of conflicts:")
+        for r in reasons:
+            print(" -", r)
+
+    if is_cs:
+
+        print("\nSchedule is CONFLICT SERIALIZABLE.")
+
+        all_orders = all_topological_sorts(graph)
+
+        print("\nEquivalent serial order(s):")
+
+        for order in all_orders:
+            print(" → ".join(f"T{t}" for t in order))
+        print(f"\nTotal equivalent serial schedules: {len(all_orders)}")
+
+    else:
+        print("\nSchedule is NOT conflict serializable.")
+
+        if cycle:
+            print("\n===== SERIALIZABILITY VIOLATION =====")
+            print("Cycle detected in precedence graph:\n")
+
+            cycle_str = " → ".join(f"T{t}" for t in cycle)
+
+            print("    " + cycle_str)
+
+            print("\nThis cycle means the schedule cannot be transformed")
+            print("into any equivalent serial execution.")
+            print("======================================")
+
+def all_topological_sorts(graph: Dict[int, Set[int]]) -> List[List[int]]:
+    """
+    Generate ALL possible topological orders of the precedence graph.
+    Used to list all equivalent serial schedules.
+    """
+
+    indeg = {u: 0 for u in graph}
+
+    for u in graph:
+        for v in graph[u]:
+            indeg[v] += 1
+
+    result = []
+    visited = set()
+
+    def backtrack(path, indeg):
+        found = False
+
+        for node in sorted(graph.keys()):
+            if node not in visited and indeg[node] == 0:
+
+                visited.add(node)
+                path.append(node)
+
+                new_indeg = indeg.copy()
+                for v in graph[node]:
+                    new_indeg[v] -= 1
+
+                backtrack(path, new_indeg)
+
+                visited.remove(node)
+                path.pop()
+
+                found = True
+
+        if not found:
+            result.append(path.copy())
+
+    backtrack([], indeg)
+
+    return result
