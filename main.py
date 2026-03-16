@@ -14,6 +14,8 @@ from analysis_correctness import (
     explain_property
 )
 
+import analysis_serializability
+print("USING analysis_serializability FROM:", analysis_serializability.__file__)
 from analysis_serializability import (
     check_conflict_serializable,
     visualize_precedence_graph,

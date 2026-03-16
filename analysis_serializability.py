@@ -34,12 +34,10 @@ def build_precedence_graph(history: List[Operation]) -> Tuple[Dict[int, Set[int]
       graph: adjacency list {tid: set(of tids)}
       reasons: human-readable edge reasons
     """
-    # collect tids
     tids: Set[int] = {op.tid for op in history}
     graph: Dict[int, Set[int]] = {t: set() for t in tids}
     reasons: List[str] = []
 
-    # For efficiency, group operations by item and only compare within same item.
     ops_by_item: Dict[str, List[Tuple[int, Operation]]] = {}
     for pos, op in enumerate(history):
         if op.item is None:
@@ -48,8 +46,6 @@ def build_precedence_graph(history: List[Operation]) -> Tuple[Dict[int, Set[int]
             continue
         ops_by_item.setdefault(op.item, []).append((pos, op))
 
-    # For each item, compare earlier vs later operations (worst-case O(k^2) per item),
-    # but item grouping avoids comparing unrelated operations.
     for item, ops in ops_by_item.items():
         k = len(ops)
         for i in range(k):
@@ -57,11 +53,14 @@ def build_precedence_graph(history: List[Operation]) -> Tuple[Dict[int, Set[int]
             for j in range(i + 1, k):
                 pos_j, oj = ops[j]
                 if _conflict(oi, oj):
-                    if oj.tid not in graph[oi.tid]:
-                        graph[oi.tid].add(oj.tid)
-                        reasons.append(
-                            f"Edge T{oi.tid} -> T{oj.tid} because {oi.raw} at #{pos_i} conflicts with {oj.raw} at #{pos_j} on item {item}."
-                        )
+
+                    # add edge once
+                    graph[oi.tid].add(oj.tid)
+
+                    # record every conflict reason
+                    reasons.append(
+                        f"Edge T{oi.tid} -> T{oj.tid} because {oi.raw} at #{pos_i} conflicts with {oj.raw} at #{pos_j} on item {item}."
+                    )
 
     return graph, reasons
 
@@ -200,19 +199,21 @@ def explain_serializability(is_cs: bool, graph, reasons, topo, cycle):
 
     if reasons:
         print("\nEdges created because of conflicts:")
-        for r in reasons:
+        max_show = 20
+        for r in reasons[:max_show]:
             print(" -", r)
+        if len(reasons) > max_show:
+            print(f" - ... and {len(reasons) - max_show} more conflict(s).")
 
     if is_cs:
-
         print("\nSchedule is CONFLICT SERIALIZABLE.")
 
         all_orders = all_topological_sorts(graph)
 
         print("\nEquivalent serial order(s):")
-
         for order in all_orders:
             print(" → ".join(f"T{t}" for t in order))
+
         print(f"\nTotal equivalent serial schedules: {len(all_orders)}")
 
     else:
@@ -223,7 +224,6 @@ def explain_serializability(is_cs: bool, graph, reasons, topo, cycle):
             print("Cycle detected in precedence graph:\n")
 
             cycle_str = " → ".join(f"T{t}" for t in cycle)
-
             print("    " + cycle_str)
 
             print("\nThis cycle means the schedule cannot be transformed")
