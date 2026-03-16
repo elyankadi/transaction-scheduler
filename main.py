@@ -16,6 +16,7 @@ from analysis_correctness import (
 
 import analysis_serializability
 print("USING analysis_serializability FROM:", analysis_serializability.__file__)
+
 from analysis_serializability import (
     check_conflict_serializable,
     visualize_precedence_graph,
@@ -116,7 +117,7 @@ def main():
 
         try:
             history = parse_ops(hist_str)
-            validate_history_against_transactions(history, tx_ops)
+            warnings = validate_history_against_transactions(history, tx_ops)
 
         except (ValidationError, ValueError) as e:
             print("\nInvalid history:")
@@ -124,7 +125,15 @@ def main():
             print()
             continue
 
-        print("\nHistory accepted. Running analysis...\n")
+        print("\nHistory accepted.")
+
+        if warnings:
+            print("\n--------------- Warnings ---------------")
+            for w in warnings:
+                print(" -", w)
+            print("----------------------------------------")
+
+        print("\nRunning analysis...\n")
 
         # ---------- Correctness ----------
         reads_from, _ = compute_reads_from(history)
