@@ -52,15 +52,19 @@ def main():
     # ---------------- TRANSACTION INPUT ----------------
     for tid in range(1, n + 1):
 
-        s = input(f"Enter T{tid}: ").strip()
-        ops = parse_ops(s)
+        while True:  # 🔁 keep asking until valid
 
-        try:
-            ops = validate_transaction_ops(tid, ops)
-        except ValidationError as e:
-            print("\nTransaction definition invalid:")
-            print(" -", e)
-            return
+            s = input(f"Enter T{tid}: ").strip()
+            ops = parse_ops(s)
+
+            try:
+                ops = validate_transaction_ops(tid, ops)
+                break   # valid → exit loop
+
+            except ValidationError as e:
+                print("\n Invalid transaction:")
+                print(" -", e)
+                print(f"Please re-enter T{tid}.\n")
 
         tx_ops[tid] = ops
 
@@ -135,6 +139,15 @@ def main():
 
         print("\nRunning analysis...\n")
 
+        # ---------- Conflict Serializability ----------
+        cs_ok, graph, edge_reasons, topo_order, cycle_path = check_conflict_serializable(history)
+
+        visualize_precedence_graph(graph)
+
+        explain_serializability(cs_ok, graph, edge_reasons, topo_order, cycle_path)
+
+        print("\n======================================================\n")
+
         # ---------- Correctness ----------
         reads_from, _ = compute_reads_from(history)
 
@@ -151,16 +164,6 @@ def main():
         explain_property("Rigorous", rig_ok, rig_v)
 
         print("------------------------------------------------------")
-
-        # ---------- Conflict Serializability ----------
-        cs_ok, graph, edge_reasons, topo_order, cycle_path = check_conflict_serializable(history)
-
-        visualize_precedence_graph(graph)
-
-        explain_serializability(cs_ok, graph, edge_reasons, topo_order, cycle_path)
-
-        print("\n======================================================\n")
-
 
 if __name__ == "__main__":
     main()
