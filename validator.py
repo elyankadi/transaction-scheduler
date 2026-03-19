@@ -106,8 +106,7 @@ def validate_history_against_transactions(
     for tid, expected_ops in tx_ops.items():
         actual_ops = actual_by_tid[tid]
 
-        # 1) Length must match exactly
-                # 1) Length mismatch (allow ACTIVE transactions)
+        # 1) Length mismatch (allow ACTIVE transactions)
         if len(actual_ops) != len(expected_ops):
 
             # Case: transaction not finished in history
