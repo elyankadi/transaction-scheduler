@@ -151,17 +151,29 @@ def main():
         # ---------- Correctness ----------
         reads_from, _ = compute_reads_from(history)
 
-        rc_ok, rc_v = check_recoverable(history, reads_from)
-        aca_ok, aca_v = check_aca(history, reads_from)
-        strict_ok, strict_v = check_strict(history)
-        rig_ok, rig_v = check_rigorous(history)
+        rc_ok, rc_v, rc_explanations = check_recoverable(history, reads_from)
+        aca_ok, aca_v, aca_explanations = check_aca(history, reads_from)
+        strict_ok, strict_v, strict_explanations = check_strict(history)
+        rig_ok, rig_v, rig_explanations = check_rigorous(history)
 
         print("--------------- Correctness Properties ---------------")
 
-        explain_property("Recoverable (RC)", rc_ok, rc_v)
-        explain_property("ACA", aca_ok, aca_v)
-        explain_property("Strict", strict_ok, strict_v)
-        explain_property("Rigorous", rig_ok, rig_v)
+        def print_result(name, ok, violations, explanations):
+            print(f"\n{name}: {'YES' if ok else 'NO'}")
+
+            if ok:
+                for e in explanations:
+                    print(" -", e)
+            else:
+                print("Violations detected:")
+                for v in violations:
+                    print(" -", v)
+
+
+        print_result("Recoverable (RC)", rc_ok, rc_v, rc_explanations)
+        print_result("ACA", aca_ok, aca_v, aca_explanations)
+        print_result("Strict", strict_ok, strict_v, strict_explanations)
+        print_result("Rigorous", rig_ok, rig_v, rig_explanations)
 
         print("------------------------------------------------------")
 

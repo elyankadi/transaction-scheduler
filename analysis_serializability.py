@@ -206,6 +206,11 @@ def explain_serializability(is_cs: bool, graph, reasons, topo, cycle):
             print(f" - ... and {len(reasons) - max_show} more conflict(s).")
 
     if is_cs:
+        print("\nAll conflicts were checked:")
+        for r in reasons[:20]:
+            print(" -", r)
+
+        print("\nNo cycles detected → schedule is serializable.")
         print("\nSchedule is CONFLICT SERIALIZABLE.")
 
         all_orders = all_topological_sorts(graph)

@@ -54,6 +54,7 @@ def check_recoverable(history: List[Operation], reads_from: ReadsFrom) -> Tuple[
     """
     commit = _build_commit_index(history)
     violations: List[str] = []
+    explanations: List[str] = []
 
     for read_pos, (writer_tid, writer_pos) in reads_from.items():
         if writer_tid is None:
@@ -77,7 +78,22 @@ def check_recoverable(history: List[Operation], reads_from: ReadsFrom) -> Tuple[
                 f"but {history[read_pos].raw} at #{read_pos} read-from T{writer_tid} at #{writer_pos}."
             )
 
-    return (len(violations) == 0), violations
+    if len(violations) == 0:
+        for read_pos, (writer_tid, writer_pos) in reads_from.items():
+            if writer_tid is None:
+                continue
+
+            reader_tid = history[read_pos].tid
+            item = history[read_pos].item
+
+            explanations.append(
+                f"T{writer_tid} commits before T{reader_tid} "
+                f"(r{reader_tid}[{item}] reads from w{writer_tid}[{item}])"
+            )
+
+        explanations.append("All read-from commit dependencies were checked → RC holds.")
+
+    return (len(violations) == 0), violations, explanations
 
 def check_aca(history: List[Operation], reads_from: ReadsFrom) -> Tuple[bool, List[str]]:
     """
@@ -86,6 +102,7 @@ def check_aca(history: List[Operation], reads_from: ReadsFrom) -> Tuple[bool, Li
     """
     commit = _build_commit_index(history)
     violations: List[str] = []
+    explanations: List[str] = []
 
     for read_pos, (writer_tid, writer_pos) in reads_from.items():
         if writer_tid is None:
@@ -104,7 +121,21 @@ def check_aca(history: List[Operation], reads_from: ReadsFrom) -> Tuple[bool, Li
                 f"before T{writer_tid} COMMITs at #{commit[writer_tid]}."
             )
 
-    return (len(violations) == 0), violations
+    if len(violations) == 0:
+        for read_pos, (writer_tid, writer_pos) in reads_from.items():
+            if writer_tid is None:
+                continue
+
+            read_op = history[read_pos]
+            item = read_op.item
+
+            explanations.append(
+                f"w{writer_tid}[{item}] commits before r{read_op.tid}[{item}]"
+            )
+
+        explanations.append("All read-from cases were checked → ACA holds.")
+
+    return (len(violations) == 0), violations, explanations
 
 
 def check_strict(history: List[Operation]) -> Tuple[bool, List[str]]:
@@ -114,6 +145,7 @@ def check_strict(history: List[Operation]) -> Tuple[bool, List[str]]:
     """
     term = _build_terminate_index(history)
     violations: List[str] = []
+    explanations: List[str] = []
 
     active_writer: Dict[str, Tuple[int, int]] = {}  # item -> (tid, write_pos)
 
@@ -132,7 +164,12 @@ def check_strict(history: List[Operation]) -> Tuple[bool, List[str]]:
 
         # If someone holds last uncommitted write on item, block others
         if item in active_writer:
-            holder_tid, holder_pos = active_writer[item]
+            holder_tid, holder_pos = active_writer[item]   # ✅ FIRST define it
+
+            if holder_tid != op.tid:
+                explanations.append(
+                    f"{op.raw} happens after T{holder_tid} released {item}"
+                )
             if holder_tid != op.tid and (op.optype == OpType.READ or op.is_write_like):
                 violations.append(
                     f"Strict violated on {item}: {op.raw} at #{pos} occurs after last write-like "
@@ -143,7 +180,10 @@ def check_strict(history: List[Operation]) -> Tuple[bool, List[str]]:
         if op.is_write_like:
             active_writer[item] = (op.tid, pos)
 
-    return (len(violations) == 0), violations
+    if len(violations) == 0:
+        explanations.append("All conflicting accesses were checked → Strict holds.")
+
+    return (len(violations) == 0), violations, explanations
 
 
 def check_rigorous(history: List[Operation]) -> Tuple[bool, List[str]]:
@@ -159,6 +199,7 @@ def check_rigorous(history: List[Operation]) -> Tuple[bool, List[str]]:
     """
     term = _build_terminate_index(history)
     violations: List[str] = []
+    explanations: List[str] = []
 
     # Shared and exclusive locks per item
     s_holders: Dict[str, Set[int]] = {}  # item -> tids holding S-lock
@@ -201,6 +242,7 @@ def check_rigorous(history: List[Operation]) -> Tuple[bool, List[str]]:
                     f"before T{cur_x} terminates at #{term.get(cur_x, '???')}."
                 )
             else:
+                explanations.append(f"{op.raw} allowed (no conflicting lock)")
                 s_holders.setdefault(item, set()).add(tid)
 
         else:
@@ -216,6 +258,7 @@ def check_rigorous(history: List[Operation]) -> Tuple[bool, List[str]]:
                 )
             else:
                 # Grant X-lock (upgrade allowed if only self is reading)
+                explanations.append(f"{op.raw} allowed (no conflicting lock)")
                 x_holder[item] = tid
                 # Optional cleanup: keep only self in S-holders if present
                 if item in s_holders:
@@ -223,7 +266,10 @@ def check_rigorous(history: List[Operation]) -> Tuple[bool, List[str]]:
                     if not s_holders[item]:
                         del s_holders[item]
 
-    return (len(violations) == 0), violations
+    if len(violations) == 0:
+        explanations.append("All lock constraints were checked → Rigorous holds.")
+
+    return (len(violations) == 0), violations, explanations
 
 def explain_property(name: str, ok: bool, violations: List[str]):
     print(f"\n{name}: {'YES' if ok else 'NO'}")
