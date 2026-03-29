@@ -14,11 +14,15 @@ RE_FORMAL_RW = re.compile(r"^(read|write)\(t?(\d+),\s*([A-Za-z]\w*)\)$", re.IGNO
 RE_FORMAL_INCDEC = re.compile(r"^(increment|decrement)\(t?(\d+),\s*([A-Za-z]\w*)\)$", re.IGNORECASE)
 
 def parse_ops(op_string: str) -> List[Operation]:
-    tokens = [t.strip() for t in re.split(r"[,\s]+", op_string.strip()) if t.strip()]
+    tokens = [
+        t.strip().rstrip(',')
+        for t in re.split(r"\s+", op_string.strip())
+        if t.strip()
+    ]
     ops: List[Operation] = []
 
     for tok in tokens:
-        tok = tok.lower()  # 🔥 IMPROVEMENT 1: normalize tokens
+        tok = tok.lower() 
 
         # Shorthand START (s1)
         m = RE_START.match(tok)

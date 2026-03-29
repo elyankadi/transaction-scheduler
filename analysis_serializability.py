@@ -11,7 +11,7 @@ def _conflict(op1: Operation, op2: Operation) -> bool:
       - same item
       - and at least one is write-like (WRITE/INC/DEC)
     """
-    if op1.tid == op2.tid:
+    if op1.tid == op2.tid: #since operations from the same transaction do not conflict as they are already ordered
         return False
     if op1.item is None or op2.item is None:
         return False

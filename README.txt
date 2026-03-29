@@ -49,10 +49,10 @@ T2: r2[x] w2[y] c2
 
 The system will analyze the schedule and report:
 
+- Conflict serializability
+- Precedence graph
+- Equivalent serial schedules
 - Recoverable (RC)
 - ACA
 - Strict
 - Rigorous
-- Conflict serializability
-- Precedence graph
-- Equivalent serial schedules

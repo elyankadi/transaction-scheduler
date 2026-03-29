@@ -52,16 +52,16 @@ def main():
     # ---------------- TRANSACTION INPUT ----------------
     for tid in range(1, n + 1):
 
-        while True:  # 🔁 keep asking until valid
+        while True:  
 
             s = input(f"Enter T{tid}: ").strip()
-            ops = parse_ops(s)
 
             try:
+                ops = parse_ops(s)   # move parsing inside try
                 ops = validate_transaction_ops(tid, ops)
-                break   # valid → exit loop
+                break
 
-            except ValidationError as e:
+            except (ValidationError, ValueError) as e:
                 print("\n Invalid transaction:")
                 print(" -", e)
                 print(f"Please re-enter T{tid}.\n")
